@@ -7,5 +7,5 @@ window.CFG = {
   // internamente. O DOMAIN precisa EXISTIR na internet (ter registro DNS) para o Supabase aceitar o endereço,
   // mas nenhum e-mail é enviado. Use um domínio seu, por exemplo o endereço do GitHub Pages: 'SEU_USUARIO.github.io'.
   // Depois que existirem contas, NÃO mude este valor (o login depende dele).
-  DOMAIN: 'SEU_USUARIO.github.io'
+  DOMAIN: 'https://luizfs007.github.io/minhas-milhas/'
 };
