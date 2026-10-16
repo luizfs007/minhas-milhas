@@ -109,8 +109,8 @@ function shell(items) {
   $('#out').onclick = () => sb.auth.signOut();
 }
 const AREAS = {
-  free: { items: [['dash', '📊', 'Resumo'], ['progs', '✈️', 'Programas'], ['calc', '🧮', 'Calculadoras'], ['opp', '💹', 'Oportunidades'], ['thiny', '💬', 'Thiny'], ['up', '⭐', 'Premium']], views: { dash: () => dash(), progs: () => progView(), calc: () => calcView(), opp: () => oppView(), thiny: () => thinyView(), up: () => upView() } },
-  pre: { items: [['dash', '📊', 'Resumo'], ['progs', '✈️', 'Programas'], ['cards', '💳', 'Cartões'], ['goals', '🎯', 'Metas'], ['hist', '🕘', 'Histórico'], ['calc', '🧮', 'Calculadoras'], ['opp', '💹', 'Oportunidades'], ['thiny', '💬', 'Thiny'], ['exp', '📤', 'Exportar']], views: { dash: () => dash(), progs: () => progView(), cards: () => cardsView(), goals: () => goalsView(), hist: () => histView(), calc: () => calcView(), opp: () => oppView(), thiny: () => thinyView(), exp: () => expView() } },
+  free: { items: [['dash', '📊', 'Resumo'], ['progs', '✈️', 'Programas'], ['calc', '🧮', 'Calculadoras'], ['opp', '💹', 'Oportunidades'], ['up', '⭐', 'Premium']], views: { dash: () => dash(), progs: () => progView(), calc: () => calcView(), opp: () => oppView(), thiny: () => thinyView(), up: () => upView() } },
+  pre: { items: [['dash', '📊', 'Resumo'], ['progs', '✈️', 'Programas'], ['cards', '💳', 'Cartões'], ['goals', '🎯', 'Metas'], ['hist', '🕘', 'Histórico'], ['calc', '🧮', 'Calculadoras'], ['opp', '💹', 'Oportunidades'], ['exp', '📤', 'Exportar']], views: { dash: () => dash(), progs: () => progView(), cards: () => cardsView(), goals: () => goalsView(), hist: () => histView(), calc: () => calcView(), opp: () => oppView(), thiny: () => thinyView(), exp: () => expView() } },
   adm: { items: [['dash', '📊', 'Painel'], ['users', '👥', 'Usuários'], ['progs', '✈️', 'Programas'], ['plans', '🧩', 'Planos'], ['cfg', '⚙️', 'Configurações'], ['opps', '💹', 'Oportunidades'], ['audit', '📜', 'Auditoria'], ['cmd', '🛠️', 'Comandos']], views: { dash: () => aDash(), users: () => aUsers(), progs: () => aProgs(), plans: () => aPlans(), cfg: () => aCfg(), opps: () => aOpps(), audit: () => aAudit(), cmd: () => aCmd() } }
 };
 async function render() {
@@ -202,9 +202,15 @@ function progView() {
 }
 function pform(p) {
   const pre = area === 'pre';
-  modal(p ? 'Editar programa' : 'Novo programa', `<label>Programa</label><input name="name" required maxlength="40" value="${esc(p?.name || '')}"><label>Saldo (milhas ou pontos)</label><input name="balance" type="number" min="0" step="1" required value="${p?.balance ?? ''}"><label>Vencimento</label><input name="exp" type="date" value="${p?.expires_on || ''}">` +
+  const knownPrograms = ['Livelo', 'Esfera', 'Azul Fidelidade', 'LATAM Pass', 'Smiles', 'TAP Miles&Go', 'ALL Accor', 'Outro programa'];
+  const currentName = p?.name || '';
+  const knownMatch = knownPrograms.slice(0, -1).find(n => n.toLowerCase() === currentName.toLowerCase());
+  const selectedProgram = knownMatch || 'Outro programa';
+  modal(p ? 'Editar programa' : 'Novo programa', `<label>Programa de fidelidade</label><select name="program_choice" required>${knownPrograms.map(n => `<option value="${esc(n)}" ${n === selectedProgram ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select><label>Nome do programa (se escolher Outro)</label><input name="custom_name" maxlength="40" value="${knownMatch ? '' : esc(currentName)}" placeholder="Digite o nome do programa"><label>Saldo (milhas ou pontos)</label><input name="balance" type="number" min="0" step="1" required value="${p?.balance ?? ''}"><label>Vencimento</label><input name="exp" type="date" value="${p?.expires_on || ''}">` +
     (pre ? `<label>Valor do milheiro (R$)</label><input name="mil" type="number" min="0" step="0.01" value="${p?.milheiro ?? ''}"><label>Titular</label><input name="holder" maxlength="30" value="${esc(p?.holder || '')}">` : ''), 'Salvar', async f => {
-    const o = { name: f.name.value.trim().slice(0, 40), balance: Math.max(0, parseInt(f.balance.value) || 0), expires_on: f.exp.value || null };
+    const choice = f.program_choice.value;
+    const programName = choice === 'Outro programa' ? f.custom_name.value.trim() : choice;
+    const o = { name: programName.slice(0, 40), balance: Math.max(0, parseInt(f.balance.value) || 0), expires_on: f.exp.value || null };
     if (!o.name) { toast('Informe o nome do programa.', false); return false; }
     if (pre) { o.milheiro = f.mil.value ? +f.mil.value : null; o.holder = f.holder.value.trim() || null; }
     const q = p ? sb.from('programs').update(o).eq('id', p.id) : sb.from('programs').insert({ ...o, user_id: me.id });
