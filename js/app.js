@@ -25,7 +25,7 @@ function modal(title, body, ok, submit) {
 const mail = u => u + '@' + C.DOMAIN;
 function loginView(msg = '') {
   area = ''; app.className = '';
-  app.innerHTML = `<div class="auth"><div class="box"><div class="logo">✈️ Minhas Milhas</div>
+  app.innerHTML = `<div class="auth auth-showcase"><div class="auth-atmosphere" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div><div class="auth-layout"><section class="auth-story"><div class="auth-brand"><span class="auth-brand-icon">✈</span><span>MINHAS <b>MILHAS</b></span></div><div class="auth-eyebrow"><span class="auth-live-dot"></span> SUA JORNADA COMEÇA AQUI</div><h1>Suas milhas.<br><em>Novos destinos.</em></h1><p class="auth-intro">Organize seus programas de fidelidade, acompanhe seus saldos e descubra oportunidades para aproveitar melhor cada ponto.</p><div class="auth-feature-grid"><article class="auth-feature"><span>↗</span><div><b>Visão inteligente</b><small>Seus saldos reunidos em um só lugar.</small></div></article><article class="auth-feature"><span>◈</span><div><b>Oportunidades</b><small>Acompanhe promoções e transferências.</small></div></article><article class="auth-feature"><span>✦</span><div><b>Thiny, sua assistente IA</b><small>Uma ajudante para sua jornada de milhas.</small></div></article><article class="auth-feature"><span>⌁</span><div><b>Planeje melhor</b><small>Calculadoras para comparar possibilidades.</small></div></article></div><div class="auth-trust"><span>◉</span> Seus dados e suas conversas são individuais por conta.</div></section><section class="box auth-box"><div class="auth-box-heading"><span class="auth-mini-icon">✦</span><div><h2>Bem-vindo de volta</h2><p>Acesse seu espaço de viagens.</p></div></div>
   <div class="tabs"><button data-t="in" class="on">Entrar</button><button data-t="up">Criar conta</button></div>
   <form id="af"><label>Usuário</label><input name="u" autocomplete="username" required maxlength="20" placeholder="ex.: maria_silva">
   <label>Senha</label><input name="p" type="password" autocomplete="current-password" required minlength="8">
@@ -34,7 +34,7 @@ function loginView(msg = '') {
   <label class="opt"><input type="radio" name="pl" value="premium"><span><b>Premium</b>: todos os recursos. Liberado após aprovação do administrador.</span></label>
   <label class="opt"><input type="checkbox" name="ok"><span>Li e aceito o uso dos meus dados no app (LGPD).</span></label></div>
   <p class="err" id="am">${esc(msg)}</p><button class="btn pri wide" id="ab">Entrar</button></form>
-  <p class="hint">Esqueceu a senha? Peça ao administrador para definir uma nova. Não há recuperação por e-mail nesta versão.</p></div></div>`;
+  <p class="hint auth-password-note">Esqueceu a senha? Peça ao administrador para definir uma nova. Não há recuperação por e-mail nesta versão.</p><div class="auth-box-foot"><span>✦</span> Milhas bem cuidadas. Viagens mais inteligentes.</div></section></div><footer class="auth-footer"><span>MINHAS MILHAS</span><span>Organize · Compare · Planeje</span><span>Uma plataforma para sua próxima viagem</span></footer></div>`;
   let up = false; const f = $('#af');
   app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     up = b.dataset.t === 'up'; app.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('on', x === b));
