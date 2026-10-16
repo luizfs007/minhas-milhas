@@ -34,7 +34,7 @@ function loginView(msg = '') {
   <label class="opt"><input type="radio" name="pl" value="premium"><span><b>Premium</b>: todos os recursos. Liberado após aprovação do administrador.</span></label>
   <label class="opt"><input type="checkbox" name="ok"><span>Li e aceito o uso dos meus dados no app (LGPD).</span></label></div>
   <p class="err" id="am">${esc(msg)}</p><button class="btn pri wide" id="ab">Entrar</button></form>
-  <p class="hint auth-password-note">Esqueceu a senha? Peça ao administrador para definir uma nova. Não há recuperação por e-mail nesta versão.</p><div class="auth-box-foot"><span>✦</span> Milhas bem cuidadas. Viagens mais inteligentes.</div></section></div><aside class="auth-thiny-teaser" aria-label="Assistente Thiny"><div class="auth-thiny-head"><span class="auth-thiny-avatar">✦</span><div><b>Thiny</b><small>Sua assistente de IA</small></div><span class="auth-thiny-online"></span></div><p>Olá! Sou a Thiny 👋<br>Como posso ajudar na sua jornada de milhas?</p><div class="auth-thiny-chip">Como aproveitar melhor minhas milhas?</div><div class="auth-thiny-login-note">Entre na sua conta para conversar comigo</div></aside><div class="auth-thiny-orb" aria-hidden="true"><span>✦</span><small>Thiny</small></div><footer class="auth-footer"><span>MINHAS MILHAS</span><span>Organize · Compare · Planeje</span><span>Uma plataforma para sua próxima viagem</span></footer></div>`;
+  <p class="hint auth-password-note">Esqueceu a senha? Peça ao administrador para definir uma nova. Não há recuperação por e-mail nesta versão.</p><div class="auth-box-foot"><span>✦</span> Milhas bem cuidadas. Viagens mais inteligentes.</div></section></div><footer class="auth-footer"><span>MINHAS MILHAS</span><span>Organize · Compare · Planeje</span><span>Uma plataforma para sua próxima viagem</span></footer></div>`;
   let up = false; const f = $('#af');
   app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     up = b.dataset.t === 'up'; app.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('on', x === b));
@@ -363,8 +363,32 @@ const ACT = {
   cmd(c) { if (confirm('Executar o comando "' + c + '"?')) rpc('admin_command', { p_cmd: c }, 'Comando executado.'); }
 };
 
+/* ---------- Thiny flutuante: bolinha fixa + janela de conversa ---------- */
+function initThinyFloating() {
+  if (document.getElementById('thiny-widget')) return;
+  const root = document.createElement('div'); root.id = 'thiny-widget'; root.innerHTML = `
+    <section class="thiny-float-panel" id="thiny-float-panel" aria-label="Conversa com Thiny" hidden>
+      <header class="thiny-float-head"><span class="thiny-float-avatar">✦</span><div><b>Thiny</b><small>Sua assistente de IA <i></i></small></div><button type="button" id="thiny-float-close" aria-label="Fechar conversa">×</button></header>
+      <div class="thiny-float-messages" id="thiny-float-messages"><div class="thiny-bubble thiny-bot">Olá! 👋 Sou a Thiny. Como posso ajudar com suas milhas hoje?</div><div class="thiny-suggestions"><button type="button">Quero ver meus saldos</button><button type="button">Como usar minhas milhas?</button><button type="button">Tem alguma promoção hoje?</button></div></div>
+      <form id="thiny-float-form" class="thiny-float-compose"><input id="thiny-float-input" maxlength="400" placeholder="Digite sua mensagem..." autocomplete="off"><button type="submit" aria-label="Enviar mensagem">➤</button></form>
+      <footer class="thiny-float-foot">Suas conversas são individuais por conta</footer>
+    </section>
+    <button type="button" id="thiny-float-launch" class="thiny-float-launch" aria-label="Abrir conversa com Thiny"><span class="thiny-launch-spark">✦</span><span class="thiny-launch-label">Thiny</span><i></i></button>`;
+  document.body.appendChild(root);
+  const panel = root.querySelector('#thiny-float-panel'), launcher = root.querySelector('#thiny-float-launch'), messages = root.querySelector('#thiny-float-messages');
+  const drawMessages = () => { messages.querySelectorAll('.thiny-bubble').forEach(n=>n.remove()); const frag=document.createDocumentFragment(); (tmsgs||[]).forEach(m=>{const d=document.createElement('div');d.className='thiny-bubble '+(m.r==='u'?'thiny-user':'thiny-bot');d.textContent=m.t;frag.appendChild(d)}); messages.prepend(frag); messages.scrollTop=messages.scrollHeight; };
+  launcher.onclick = async () => { panel.hidden=false; launcher.classList.add('thiny-launch-hidden'); if (!me) { messages.innerHTML='<div class="thiny-bubble thiny-bot">Olá! 👋 Para conversar comigo e manter seu histórico privado, entre na sua conta primeiro.</div>'; return; } try { if(!tloaded) await loadConvs(); if(!tcur && tconvs.length && !tmsgs.length) await openConv(tconvs[0].id); messages.innerHTML=''; drawMessages(); } catch(e) { messages.innerHTML='<div class="thiny-bubble thiny-bot">Olá! Pode me perguntar sobre suas milhas.</div>'; } root.querySelector('#thiny-float-input').focus(); };
+  root.querySelector('#thiny-float-close').onclick = () => { panel.hidden=true; launcher.classList.remove('thiny-launch-hidden'); };
+  root.querySelectorAll('.thiny-suggestions button').forEach(b=>b.onclick=()=>{root.querySelector('#thiny-float-input').value=b.textContent;root.querySelector('#thiny-float-form').requestSubmit();});
+  root.querySelector('#thiny-float-form').onsubmit = async e => { e.preventDefault(); const input=root.querySelector('#thiny-float-input'), q=input.value.trim(); if(!q||tbusy)return; if(!me){messages.innerHTML='<div class="thiny-bubble thiny-bot">Entre na sua conta para conversar comigo.</div>';return;} input.value=''; tbusy=true; tmsgs.push({r:'u',t:q},{r:'a',t:'Estou pensando...'}); drawMessages();
+    try { const d=await fn('thiny',{pergunta:q,conversa_id:tcur,historico:tmsgs.slice(0,-2).slice(-6).map(m=>({r:m.r,t:m.t}))}); tmsgs[tmsgs.length-1].t=d.resposta||'Não consegui responder agora.'; if(d.conversa_id){tcur=d.conversa_id;await loadConvs();} drawMessages(); if(d.acao) await propor(d.acao); }
+    catch(err0){tmsgs[tmsgs.length-1].t=err0.message||'Não consegui responder agora.';drawMessages();} finally {tbusy=false;input.focus();}
+  };
+}
+
 /* ---------- Início ---------- */
 async function boot() {
+  initThinyFloating();
   if (!C.URL || C.URL.includes('SEU-PROJETO') || !C.KEY || C.KEY.includes('SUA_CHAVE') || !C.DOMAIN || C.DOMAIN.includes('SEU_USUARIO')) { app.innerHTML = '<div class="auth"><div class="box"><div class="logo">Configuração pendente</div><p>Preencha <b>js/config.js</b> com a URL, a chave pública e o <b>DOMAIN</b> (sugestão para este endereço: <b>'+esc(location.hostname)+'</b>).</p></div></div>'; return; }
   sb = window.supabase.createClient(C.URL, C.KEY);
   sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { resetState(); loginView(); } });
