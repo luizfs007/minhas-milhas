@@ -1207,3 +1207,39 @@ input, select, textarea { min-height: 44px; border-radius: 12px; background: rgb
 @media(max-width:1100px){.orbit-dashboard{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.orbit-overview{grid-column:1/-1}.orbit-history{grid-column:1/-1}.orbit-trend{min-height:210px}.orbit-map-card,.orbit-donut-card,.orbit-top-card{min-height:0}}
 @media(max-width:700px){.orbit-dashboard{grid-template-columns:minmax(0,1fr);gap:11px;padding-top:0}.orbit-overview,.orbit-history{grid-column:auto}.orbit-overview{padding:15px 13px}.orbit-card{padding:14px 13px;border-radius:14px}.orbit-card-heading{margin-bottom:12px}.orbit-card-heading h2,.orbit-card-heading h3{font-size:14px}.orbit-metric-grid{gap:8px}.orbit-metric{padding:10px;min-height:89px}.orbit-metric strong{font-size:20px;padding-right:0}.metric-spark{right:8px;bottom:18px;font-size:14px;opacity:.55}.orbit-metric small{font-size:8px;max-width:100%}.orbit-chart-line{height:112px}.orbit-history-chart{height:110px;gap:8px}.history-bars{gap:4px}.history-bar-value{font-size:7px}.history-bar-wrap small{font-size:7px}.orbit-empty-chart{padding:12px 8px;min-height:130px}.orbit-empty-chart span{max-width:260px;line-height:1.5}.orbit-program-row{grid-template-columns:26px minmax(50px,1fr) auto}.orbit-donut{width:108px;height:108px}.orbit-map-foot{flex-wrap:wrap}.dash-alert{align-items:flex-start}.dash-alert small{line-height:1.5}.orbit-status,.orbit-select-label{font-size:9px;padding:5px 6px}}
 @media(prefers-reduced-motion:reduce){.history-bar{animation:none}}
+
+
+/* Ajustes solicitados: navegação sem item Thiny e login que se encaixa na tela */
+@media (min-width: 761px) and (min-height: 700px) {
+  .auth.auth-showcase { min-height: 100svh; height: 100svh; box-sizing: border-box; padding: clamp(16px, 2.4vh, 28px) clamp(24px, 4vw, 60px); overflow-y: auto; }
+  .auth-showcase .auth-layout { gap: clamp(24px, 3.3vw, 54px); }
+  .auth-showcase .auth-brand { margin-bottom: clamp(18px, 2.6vh, 34px); }
+  .auth-showcase .auth-story h1 { font-size: clamp(2.4rem, 4.1vw, 4rem); margin: 14px 0 14px; }
+  .auth-showcase .auth-intro { font-size: clamp(.88rem, 1vw, 1rem); line-height: 1.55; margin-bottom: 18px; }
+  .auth-showcase .auth-feature-grid { gap: 9px; }
+  .auth-showcase .auth-feature { min-height: 72px; padding: 11px 12px; }
+  .auth-showcase .auth-feature small { font-size: .72rem; }
+  .auth-showcase .auth-plans { margin-top: 16px; }
+  .auth-showcase .auth-plan { padding: 12px; }
+  .auth-showcase .auth-plan ul { margin-top: 8px; margin-bottom: 8px; }
+  .auth-showcase .auth-trust { margin-top: 13px; }
+  .auth-showcase .auth-box { padding: clamp(20px, 2vw, 30px); }
+  .auth-showcase .auth-box-heading { margin-bottom: 16px; }
+  .auth-showcase .auth-box .tabs { margin-bottom: 15px; }
+  .auth-showcase .auth-box label { margin-top: 10px; margin-bottom: 5px; }
+  .auth-showcase .auth-box input:not([type=radio]):not([type=checkbox]) { min-height: 42px; }
+  .auth-showcase .auth-box .wide { min-height: 44px; margin-top: 12px; }
+  .auth-showcase .auth-password-note { margin-top: 11px; }
+  .auth-showcase .auth-box-foot { margin-top: 14px; padding-top: 12px; }
+  .auth-showcase .auth-footer { margin-top: 12px; }
+}
+@media (max-height: 760px) and (min-width: 761px) {
+  .auth.auth-showcase { justify-content: flex-start; }
+  .auth-showcase .auth-layout { align-items: start; }
+  .auth-showcase .auth-story h1 { font-size: clamp(2.2rem, 3.7vw, 3.4rem); }
+  .auth-showcase .auth-feature { min-height: 64px; }
+  .auth-showcase .auth-plan ul { font-size: .75rem; }
+}
+@media (max-width: 760px) {
+  .auth.auth-showcase { height: auto; min-height: 100svh; overflow-y: visible; }
+}
