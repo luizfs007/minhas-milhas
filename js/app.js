@@ -31,10 +31,10 @@ function loginView(msg = '') {
   <label>Senha</label><input name="p" type="password" autocomplete="current-password" required minlength="8">
   <div id="upx" hidden><label>Plano</label>
   <label class="opt"><input type="radio" name="pl" value="free" checked><span><b>Free</b>: até ${lim.free?.max_programs ?? 3} programas, resumo, alertas e calculadoras.</span></label>
-  <label class="opt"><input type="radio" name="pl" value="premium"><span><b>Premium</b>: todos os recursos. Liberado após aprovação do administrador.</span></label>
+  <label class="opt"><input type="radio" name="pl" value="premium"><span><b>Premium</b>: todos os recursos. Disponível após aprovação do pedido.</span></label>
   <label class="opt"><input type="checkbox" name="ok"><span>Li e aceito o uso dos meus dados no app (LGPD).</span></label></div>
   <p class="err" id="am">${esc(msg)}</p><button class="btn pri wide" id="ab">Entrar</button></form>
-  <p class="hint auth-password-note">Esqueceu a senha? Peça ao administrador para definir uma nova. Não há recuperação por e-mail nesta versão.</p><div class="auth-box-foot"><span>✦</span> Milhas bem cuidadas. Viagens mais inteligentes.</div></section></div><footer class="auth-footer"><span>MINHAS MILHAS</span><span>Organize · Compare · Planeje</span><span>Uma plataforma para sua próxima viagem</span></footer></div>`;
+  <p class="hint auth-password-note">Esqueceu a senha? A recuperação de senha não está disponível nesta versão.</p><div class="auth-box-foot"><span>✦</span> Milhas bem cuidadas. Viagens mais inteligentes.</div></section></div><footer class="auth-footer"><span>MINHAS MILHAS</span><span>Organize · Compare · Planeje</span><span>Uma plataforma para sua próxima viagem</span></footer></div>`;
   let up = false; const f = $('#af');
   app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
     up = b.dataset.t === 'up'; app.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('on', x === b));
