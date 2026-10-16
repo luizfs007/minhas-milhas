@@ -53,6 +53,7 @@ function loginView(msg = '') {
       const t = r.error.message || '';
       m.textContent = /invalid login/i.test(t) ? 'Usuário ou senha incorretos.' : /database error|already|registered/i.test(t) ? 'Esse usuário já existe ou é inválido.'
         : /email address .* invalid/i.test(t) ? 'O Supabase recusou o DOMAIN de js/config.js. Use um domínio que exista na internet (veja o README).'
+        : /signups? (are )?disabled/i.test(t) ? 'Cadastros desativados no Supabase: ative o provedor Email e a opção de novos usuários (veja o README).'
         : /not confirmed/i.test(t) ? 'No Supabase, desligue "Confirm email" (veja o README).' : t;
       return;
     }
@@ -62,10 +63,20 @@ function loginView(msg = '') {
   };
 }
 
+function resetState() {
+  me = null; progs = []; ud = { goals: [], hist: [], cards: [], txs: [] }; users = []; aprogs = [];
+  tmsgs = []; tconvs = []; tcur = null; tloaded = false; tbusy = false; view = 'dash';
+  try { speechSynthesis.cancel(); } catch (e) {}
+}
 async function enter(user) {
+  resetState();
   app.innerHTML = '<div class="load">Carregando…</div>';
   const r = await sb.from('profiles').select('*').eq('id', user.id).single();
-  if (r.error || !r.data) { await sb.auth.signOut(); loginView('Não foi possível carregar seu perfil.'); return; }
+  if (r.error || !r.data) {
+    await sb.auth.signOut(); const t = r.error?.message || '';
+    loginView(/permission denied/i.test(t) ? 'Sem permissão para ler o perfil: faltam permissões no banco (rode sql/03_correcao_perfil.sql).' : !r.data || /no rows|multiple \(or no\) rows/i.test(t) ? 'Seu perfil não foi criado no cadastro (rode sql/03_correcao_perfil.sql).' : 'Não foi possível carregar seu perfil: ' + t);
+    return;
+  }
   me = r.data;
   if (me.blocked) { await sb.auth.signOut(); loginView('Conta bloqueada. Fale com o administrador.'); return; }
   sb.rpc('touch');
@@ -97,7 +108,7 @@ const AREAS = {
 async function render() {
   const A = AREAS[area]; shell(A.items); const mn = $('#mn'); mn.innerHTML = '<div class="load">Carregando…</div>';
   try { mn.innerHTML = await A.views[view](); } catch (e) { mn.innerHTML = `<div class="empty">${esc(err(e))}</div>`; }
-  mn.oninput = mn.onchange = e => { if (e.target.closest('[data-calc]')) calc(e); }; mn.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'ti') ACT.tsend(); };
+  mn.oninput = e => { if (e.target.closest('[data-calc]')) calc(e); }; mn.onchange = e => { if (e.target.closest('[data-calc]')) calc(e); if (e.target.id === 'tc') ACT.topen(e.target.value); }; mn.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'ti') ACT.tsend(); };
   mn.onclick = async e => { const b = e.target.closest('[data-a]'); if (b && ACT[b.dataset.a]) await ACT[b.dataset.a](b.dataset.id, b); };
 }
 
@@ -172,7 +183,7 @@ async function aCfg() {
   const r = await sb.from('app_settings').select('*'); if (r.error) throw r.error; const c = Object.fromEntries(r.data.map(x => [x.key, x.value]));
   return head('Configurações') + `<div class="card" data-cf="general"><h3>Geral</h3><label>Nome do sistema<input name="nome" maxlength="40" value="${esc(c.general?.nome || '')}"></label><button class="btn pri" data-a="csave" data-id="general">Salvar</button></div>
   <div class="card" data-cf="signup"><h3>Cadastro</h3><label class="opt"><input type="checkbox" name="premium_instant" ${c.signup?.premium_instant ? 'checked' : ''}><span>Liberar Premium na hora para quem escolher esse plano (sem aprovação). Use só para testes.</span></label><button class="btn pri" data-a="csave" data-id="signup">Salvar</button></div>
-  <div class="card" data-cf="thiny"><h3>Thiny</h3><label class="opt"><input type="checkbox" name="enabled" ${c.thiny?.enabled !== false ? 'checked' : ''}><span>Thiny ativada</span></label><label class="opt"><input type="checkbox" name="voz_somente_premium" ${c.thiny?.voz_somente_premium !== false ? 'checked' : ''}><span>Voz somente para Premium</span></label><label>Ações permitidas (separadas por vírgula)<input name="acoes" value="${esc((c.thiny?.acoes_permitidas || []).join(', '))}"></label><button class="btn pri" data-a="csave" data-id="thiny">Salvar</button></div>`;
+  <div class="card" data-cf="thiny"><h3>Thiny</h3><label class="opt"><input type="checkbox" name="enabled" ${c.thiny?.enabled !== false ? 'checked' : ''}><span>Thiny ativada</span></label><label class="opt"><input type="checkbox" name="salvar_historico" ${c.thiny?.salvar_historico !== false ? 'checked' : ''}><span>Salvar o histórico das conversas de cada usuário (cada um vê só o seu)</span></label><label class="opt"><input type="checkbox" name="voz_somente_premium" ${c.thiny?.voz_somente_premium !== false ? 'checked' : ''}><span>Voz somente para Premium</span></label><label>Ações permitidas (separadas por vírgula)<input name="acoes" value="${esc((c.thiny?.acoes_permitidas || []).join(', '))}"></label><button class="btn pri" data-a="csave" data-id="thiny">Salvar</button></div>`;
 }
 async function aAudit() {
   const r = await sb.from('admin_audit').select('*').order('at', { ascending: false }).limit(100); if (r.error) throw r.error;
@@ -230,11 +241,20 @@ async function aOpps() {
   return head('Oportunidades de mercado') + `<div class="card"><p class="hint">Edite a lista em JSON. Campos: k (a, t ou c), p, t, d, v, f (AAAA-MM-DD) e s (lista de programas para a marcação ⭐). Itens vencidos somem sozinhos.</p><textarea id="oj" rows="14" style="font-family:monospace">${esc(JSON.stringify(itens, null, 1))}</textarea><div class="row"><button class="btn pri" data-a="osave">Publicar lista</button></div></div>`;
 }
 
-let tmsgs = [], tbusy = false;
+let tmsgs = [], tbusy = false, vozOn = true, tconvs = [], tcur = null, tloaded = false, tcerr = false;
 const chatHtml = () => tmsgs.map(m => `<div class="msg ${m.r}">${esc(m.t)}</div>`).join('') || '<div class="hint">Pergunte sobre o app ou sobre milhas.</div>';
-const thinyView = () => head('Thiny') + `<div class="card"><div id="tm" class="chat">${chatHtml()}</div><div class="row2" style="margin-top:10px"><input id="ti" maxlength="400" placeholder="${area === 'pre' ? 'Pergunte ou peça um registro' : 'Pergunte sobre o app ou sobre milhas'}"><button class="btn pri" data-a="tsend">Enviar</button>${area === 'pre' && SR ? '<button class="btn" data-a="tmic">🎤</button>' : ''}</div><p class="hint">${area === 'pre' ? 'Thiny completa: usa seus dados, propõe ações que só valem depois do seu OK e fala as respostas.' : 'Thiny básica: 5 perguntas por dia, sem dados pessoais, ações ou voz.'}</p></div>`;
+async function loadConvs() { const r = await sb.from('thiny_conversations').select('id,title,updated_at').order('updated_at', { ascending: false }).limit(50); tcerr = !!r.error; tconvs = r.error ? [] : r.data; tloaded = true; }
+async function openConv(id) {
+  if (!id) { tcur = null; tmsgs = []; return; }
+  const r = await sb.from('thiny_messages').select('role,content').eq('conversation_id', id).order('id').limit(200);
+  tcur = id; tmsgs = (r.data || []).map(m => ({ r: m.role === 'user' ? 'u' : 'a', t: m.content }));
+}
+async function thinyView() {
+  if (!tloaded) { await loadConvs(); if (!tcur && tconvs.length && !tmsgs.length) await openConv(tconvs[0].id); }
+  return head('Thiny') + `<div class="card">${tcerr ? '<div class="note">Histórico indisponível: execute sql/04_thiny_historico.sql no Supabase.</div>' : `<div class="row2" style="margin-bottom:10px"><select id="tc"><option value="">+ Nova conversa</option>${tconvs.map(c => `<option value="${c.id}" ${c.id === tcur ? 'selected' : ''}>${esc(c.title)} · ${dfmt(c.updated_at)}</option>`).join('')}</select><button class="btn" data-a="tnew">Nova</button><button class="btn bad" data-a="tdel" ${tcur ? '' : 'disabled'}>Excluir</button></div>`}<div id="tm" class="chat">${chatHtml()}</div><div class="row2" style="margin-top:10px"><input id="ti" maxlength="400" placeholder="${area === 'pre' ? 'Pergunte ou peça um registro' : 'Pergunte sobre o app ou sobre milhas'}"><button class="btn pri" data-a="tsend">Enviar</button>${area === 'pre' ? `<button class="btn" data-a="tvoz" title="Ligar ou desligar a voz">${vozOn ? '🔊' : '🔇'}</button>` : ''}${area === 'pre' && SR ? '<button class="btn" data-a="tmic" title="Falar">🎤</button>' : ''}</div><p class="hint">${area === 'pre' ? 'Thiny completa: usa seus dados, propõe ações que só valem depois do seu OK e fala as respostas.' + (SR ? '' : ' O microfone não está disponível neste navegador (use Chrome ou Edge).') : 'Thiny básica: 5 perguntas por dia, sem dados pessoais, ações ou voz.'} Suas conversas são só suas.</p></div>`;
+}
 const refreshChat = () => { const c = $('#tm'); if (c) { c.innerHTML = chatHtml(); c.scrollTop = c.scrollHeight; } };
-const speak = t => { if (area !== 'pre' || !window.speechSynthesis) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(String(t).replace(/[*_#`>]|\p{Extended_Pictographic}/gu, '')); u.lang = 'pt-BR'; speechSynthesis.speak(u); } catch (e) {} };
+const speak = t => { if (area !== 'pre' || !vozOn || !window.speechSynthesis) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(String(t).replace(/[*_#`>]|\p{Extended_Pictographic}/gu, '')); u.lang = 'pt-BR'; speechSynthesis.speak(u); } catch (e) {} };
 async function propor(a) {
   if (area !== 'pre') return;
   const n = v => Math.round(+v) || 0, low = s => String(s || '').trim().toLowerCase(); let txt = '', run;
@@ -278,10 +298,19 @@ const EXTRA_ACT = {
   upass(id) { const u = uOf(id); modal('Nova senha para ' + u.username, '<label>Nova senha (mín. 8)</label><input name="p" type="password" minlength="8" required>', 'Redefinir', async f => { try { await fn('admin-users', { action: 'reset', id, password: f.p.value }); toast('Senha redefinida. Informe a nova senha ao usuário.'); } catch (e) { toast(e.message, false); return false; } }); },
   async tsend() {
     const i = $('#ti'), q = i && i.value.trim(); if (!q || tbusy) return; tbusy = true; i.value = ''; tmsgs.push({ r: 'u', t: q }, { r: 'a', t: '…' }); refreshChat();
-    try { const d = await fn('thiny', { pergunta: q, historico: tmsgs.slice(0, -2).slice(-6).map(m => ({ r: m.r, t: m.t })) }); tmsgs[tmsgs.length - 1].t = d.resposta || 'Não consegui responder agora.'; refreshChat(); speak(tmsgs[tmsgs.length - 1].t); if (d.acao) await propor(d.acao); }
-    catch (e) { tmsgs[tmsgs.length - 1].t = e.message || 'Não consegui responder agora.'; refreshChat(); }
+    try {
+      const d = await fn('thiny', { pergunta: q, conversa_id: tcur, historico: tmsgs.slice(0, -2).slice(-6).map(m => ({ r: m.r, t: m.t })) });
+      tmsgs[tmsgs.length - 1].t = d.resposta || 'Não consegui responder agora.';
+      const nova = d.conversa_id && d.conversa_id !== tcur; if (d.conversa_id) { tcur = d.conversa_id; await loadConvs(); }
+      if (nova) render(); else refreshChat();
+      speak(tmsgs[tmsgs.length - 1].t); if (d.acao) await propor(d.acao);
+    } catch (e) { tmsgs[tmsgs.length - 1].t = e.message || 'Não consegui responder agora.'; refreshChat(); }
     tbusy = false;
   },
+  async tnew() { tcur = null; tmsgs = []; render(); },
+  async topen(id) { await openConv(id); render(); },
+  async tdel() { if (!tcur || !confirm('Excluir esta conversa? Isso não pode ser desfeito.')) return; const { error } = await sb.from('thiny_conversations').delete().eq('id', tcur); if (error) return toast(err(error), false); tcur = null; tmsgs = []; await loadConvs(); toast('Conversa excluída.'); render(); },
+  tvoz() { vozOn = !vozOn; if (!vozOn) { try { speechSynthesis.cancel(); } catch (e) {} } render(); },
   tmic() { try { const r = new SR(); r.lang = 'pt-BR'; r.onresult = ev => { $('#ti').value = ev.results[0][0].transcript; ACT.tsend(); }; r.onerror = () => toast('Não consegui usar o microfone. Verifique a permissão do navegador.', false); r.start(); } catch (e) {} }
 };
 
@@ -313,7 +342,7 @@ const ACT = {
     const c = document.querySelector('[data-cf="' + k + '"]'), g = n => c.querySelector('[name=' + n + ']'); let val = {};
     if (k === 'general') val = { nome: g('nome').value.trim() };
     if (k === 'signup') val = { premium_instant: g('premium_instant').checked };
-    if (k === 'thiny') val = { enabled: g('enabled').checked, voz_somente_premium: g('voz_somente_premium').checked, acoes_permitidas: g('acoes').value.split(',').map(s => s.trim()).filter(Boolean) };
+    if (k === 'thiny') val = { enabled: g('enabled').checked, voz_somente_premium: g('voz_somente_premium').checked, salvar_historico: g('salvar_historico').checked, acoes_permitidas: g('acoes').value.split(',').map(s => s.trim()).filter(Boolean) };
     rpc('admin_set_setting', { p_key: k, p_value: val }, 'Configuração salva.');
   },
   cmd(c) { if (confirm('Executar o comando "' + c + '"?')) rpc('admin_command', { p_cmd: c }, 'Comando executado.'); }
@@ -323,7 +352,7 @@ const ACT = {
 async function boot() {
   if (!C.URL || C.URL.includes('SEU-PROJETO') || !C.KEY || C.KEY.includes('SUA_CHAVE') || !C.DOMAIN || C.DOMAIN.includes('SEU_USUARIO')) { app.innerHTML = '<div class="auth"><div class="box"><div class="logo">Configuração pendente</div><p>Preencha <b>js/config.js</b> com a URL, a chave pública e o <b>DOMAIN</b> (sugestão para este endereço: <b>'+esc(location.hostname)+'</b>).</p></div></div>'; return; }
   sb = window.supabase.createClient(C.URL, C.KEY);
-  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { me = null; loginView(); } });
+  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { resetState(); loginView(); } });
   const { data } = await sb.auth.getSession();
   if (data.session) enter(data.session.user); else loginView();
 }
