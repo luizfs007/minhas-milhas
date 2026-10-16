@@ -94,9 +94,17 @@ const saveUd = () => sb.from('user_data').upsert({ user_id: me.id, goals: ud.goa
 
 /* ---------- Estrutura e rotas por perfil ---------- */
 function shell(items) {
-  const adm = area === 'adm'; app.className = adm ? 'adm' : '';
-  app.innerHTML = `<aside class="side"><div class="brand">${adm ? '🛡️ Administração' : '✈️ Minhas Milhas'}</div><nav>${items.map(([k, i, l]) => `<button data-v="${k}" class="${view === k ? 'on' : ''}"><span>${i}</span>${l}</button>`).join('')}</nav>
-  <div class="who"><b>${esc(me.username)}</b><small>${adm ? 'Administrador' : area === 'pre' ? 'Premium' : 'Free'}</small><button class="btn sm" id="out">Sair</button></div></aside><main id="mn"></main>`;
+  const adm = area === 'adm';
+  const planLabel = adm ? 'Administrador' : area === 'pre' ? 'Plano Premium' : 'Plano Free';
+  const current = items.find(([k]) => k === view);
+  app.className = adm ? 'adm app-shell' : 'app-shell';
+  app.innerHTML = `<aside class="side">
+    <a class="brand" href="#inicio" aria-label="Minhas Milhas início"><span class="brand-mark">✈</span><span class="brand-copy"><b>minhas<span>milhas</span></b><small>SMART TRAVEL FINANCE</small></span></a>
+    <div class="nav-caption">ESPAÇO DE TRABALHO</div>
+    <nav aria-label="Navegação principal">${items.map(([k, i, l]) => `<button type="button" data-v="${k}" aria-current="${view === k ? 'page' : 'false'}" class="${view === k ? 'on' : ''}"><span class="nav-icon">${i}</span><span class="nav-label">${l}</span>${view === k ? '<span class="nav-active-dot"></span>' : ''}</button>`).join('')}</nav>
+    <div class="side-bottom"><div class="side-status"><span class="status-pulse"></span><span><b>Sistema operacional</b><small>Seu painel está pronto</small></span></div>
+    <div class="who"><div class="avatar">${esc((me.username || 'U').slice(0,1).toUpperCase())}</div><span class="who-copy"><b>${esc(me.username)}</b><small>${planLabel}</small></span><button class="btn sm logout-icon" id="out" type="button" aria-label="Sair" title="Sair">↗</button></div></div>
+  </aside><div class="workspace"><header class="topbar"><div class="topbar-heading"><span class="eyebrow">MINHAS MILHAS <i></i> CENTRAL INTELIGENTE</span><div class="topbar-title">${esc(current ? current[2] : 'Painel')}</div></div><div class="topbar-actions"><span class="live-pill"><span></span> DADOS DO SEU PAINEL</span><div class="topbar-user"><span class="avatar">${esc((me.username || 'U').slice(0,1).toUpperCase())}</span><span><b>${esc(me.username)}</b><small>${planLabel}</small></span></div></div></header><main id="mn"></main><footer class="app-footer"><span>✦ MINHAS MILHAS</span><span>Inteligência para viajar mais longe.</span></footer></div>`;
   app.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
   $('#out').onclick = () => sb.auth.signOut();
 }
@@ -109,7 +117,11 @@ async function render() {
   const A = AREAS[area]; shell(A.items); const mn = $('#mn'); mn.innerHTML = '<div class="load">Carregando…</div>';
   try { mn.innerHTML = await A.views[view](); } catch (e) { mn.innerHTML = `<div class="empty">${esc(err(e))}</div>`; }
   mn.oninput = e => { if (e.target.closest('[data-calc]')) calc(e); }; mn.onchange = e => { if (e.target.closest('[data-calc]')) calc(e); if (e.target.id === 'tc') ACT.topen(e.target.value); }; mn.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'ti') ACT.tsend(); };
-  mn.onclick = async e => { const b = e.target.closest('[data-a]'); if (b && ACT[b.dataset.a]) await ACT[b.dataset.a](b.dataset.id, b); };
+  mn.onclick = async e => {
+    const nav = e.target.closest('[data-v]');
+    if (nav) { view = nav.dataset.v; render(); return; }
+    const b = e.target.closest('[data-a]'); if (b && ACT[b.dataset.a]) await ACT[b.dataset.a](b.dataset.id, b);
+  };
 }
 
 /* ---------- Free e Premium ---------- */
@@ -118,11 +130,14 @@ function dash() {
   const nx = progs.filter(p => p.expires_on).sort((a, b) => a.expires_on > b.expires_on ? 1 : -1)[0];
   const est = progs.reduce((a, p) => a + (p.milheiro ? p.balance / 1000 * p.milheiro : 0), 0);
   const soon = progs.filter(p => p.expires_on && (new Date(p.expires_on + 'T00:00:00') - new Date()) / 864e5 <= 30);
-  return head('Resumo') + (soon.length ? `<div class="note">⚠️ Vencendo em até 30 dias: ${soon.map(p => esc(p.name) + ' (' + dfmt(p.expires_on) + ')').join(', ')}</div>` : '') +
-    `<div class="kpis">${kpi('Total de milhas', fmt(tot))}${kpi('Programas', max == null ? progs.length : progs.length + '/' + max, max == null ? 'sem limite' : 'limite do plano Free')}${kpi('Próximo vencimento', nx ? dfmt(nx.expires_on) : '—', nx ? esc(nx.name) : '')}${pre ? kpi('Valor estimado', brl(est), 'pelo milheiro informado') : ''}</div>` +
-    (max != null ? `<div class="card"><div class="meter"><i style="width:${Math.min(100, progs.length / max * 100)}%"></i></div><small>Você usa ${progs.length} de ${max} programas do plano Free.</small></div>` : '') +
-    `<div class="card"><h3>Saldo por programa</h3>${bars(progs.map(p => [p.name, p.balance]))}</div>` +
-    (pre ? `<div class="card"><h3>Últimas movimentações</h3>${bars(ud.hist.slice(0, 10).map(h => [dfmt(h.d) + ' · ' + h.p + (h.dl > 0 ? ' +' : ' −'), Math.abs(h.dl)]))}</div>` : '');
+  const firstName = (me.username || 'viajante').split(/[_.-]/)[0];
+  const welcome = `<section class="welcome-panel"><div class="welcome-copy"><span class="welcome-kicker"><span class="status-pulse"></span> SEU UNIVERSO DE VIAGENS</span><h1>Vamos mais longe, <span>${esc(firstName)}.</span></h1><p>Acompanhe seus pontos, encontre oportunidades e transforme milhas em novas experiências.</p><div class="welcome-actions"><button class="btn pri" data-v="${pre ? 'cards' : 'progs'}">${pre ? '＋ Gerenciar cartões' : '＋ Adicionar programa'}</button><button class="btn welcome-secondary" data-v="opp">Explorar oportunidades <span>↗</span></button></div></div><div class="welcome-orbit" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit-core">✈</div><span class="orbit-star star-one">✦</span><span class="orbit-star star-two">✧</span><span class="orbit-tag">MILES<br><b>∞</b></span></div><div class="welcome-grid"></div></section>`;
+  const stats = `<div class="section-heading"><div><span class="eyebrow">VISÃO GERAL</span><h2>Seu painel em números</h2></div><span class="section-note">Atualizado com seus dados</span></div><div class="kpis">${kpi('Total de milhas', fmt(tot), '✦ Pontos acumulados')}${kpi('Programas ativos', max == null ? progs.length : progs.length + '/' + max, max == null ? 'Capacidade ilimitada' : 'Limite do plano Free')}${kpi('Próximo vencimento', nx ? dfmt(nx.expires_on) : '—', nx ? esc(nx.name) : 'Nenhum vencimento informado')}${pre ? kpi('Valor estimado', brl(est), 'Baseado no milheiro informado') : ''}</div>`;
+  const shortcuts = `<section class="quick-grid"><button class="quick-card" data-v="calc"><span class="quick-icon quick-violet">⌁</span><span><b>Calculadoras</b><small>Compare pontos e dinheiro</small></span><i>↗</i></button><button class="quick-card" data-v="opp"><span class="quick-icon quick-cyan">✦</span><span><b>Oportunidades</b><small>Descubra novas promoções</small></span><i>↗</i></button><button class="quick-card" data-v="thiny"><span class="quick-icon quick-pink">✧</span><span><b>Assistente Thiny</b><small>Planeje sua próxima viagem</small></span><i>↗</i></button></section>`;
+  return welcome + (soon.length ? `<div class="note">⚠️ <b>Atenção aos vencimentos</b><br> ${soon.map(p => esc(p.name) + ' (' + dfmt(p.expires_on) + ')').join(', ')}</div>` : '') + stats +
+    (max != null ? `<div class="card plan-usage-card"><div class="plan-usage-top"><div><span class="eyebrow">SEU PLANO</span><h3>Uso dos programas</h3></div><b>${progs.length}<span> / ${max}</span></b></div><div class="meter"><i style="width:${Math.min(100, progs.length / max * 100)}%"></i></div><small>Você está usando ${progs.length} de ${max} programas disponíveis no plano Free.</small></div>` : '') +
+    shortcuts + `<div class="dashboard-columns"><div class="card chart-card"><div class="card-heading"><div><span class="eyebrow">DISTRIBUIÇÃO</span><h3>Saldo por programa</h3></div><span class="heading-symbol">▥</span></div>${progs.length ? bars(progs.map(p => [p.name, p.balance])) : '<div class="empty compact-empty">Seus programas aparecerão aqui depois do cadastro.</div>'}</div>` +
+    (pre ? `<div class="card history-card"><div class="card-heading"><div><span class="eyebrow">ATIVIDADE RECENTE</span><h3>Últimas movimentações</h3></div><span class="heading-symbol">↗</span></div>${ud.hist.length ? bars(ud.hist.slice(0, 8).map(h => [dfmt(h.d) + ' · ' + h.p + (h.dl > 0 ? ' +' : ' −'), Math.abs(h.dl)])) : '<div class="empty compact-empty">Suas movimentações serão exibidas aqui.</div>'}</div>` : `<div class="card insight-card"><span class="insight-icon">✦</span><span class="eyebrow">DICA INTELIGENTE</span><h3>Suas milhas podem ir mais longe.</h3><p>Consulte as oportunidades e compare o valor dos pontos antes de transferir ou resgatar.</p><button class="btn" data-v="opp">Ver oportunidades <span>↗</span></button></div>`) + `</div>`;
 }
 function progView() {
   const max = lim[me.plan]?.max_programs, pre = area === 'pre', full = max != null && progs.length >= max;
