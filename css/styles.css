@@ -1121,13 +1121,14 @@ input, select, textarea { min-height: 44px; border-radius: 12px; background: rgb
 .thiny-float-compose{display:flex;gap:8px;padding:12px;border-top:1px solid rgba(92,155,219,.18);background:rgba(2,9,23,.55)}.thiny-float-compose input{min-width:0;flex:1;border:1px solid rgba(79,149,219,.42);border-radius:12px;background:#071328;color:#f3f8ff;padding:12px;font:inherit;font-size:13px;outline:none}.thiny-float-compose input:focus{border-color:#39d9ff;box-shadow:0 0 0 3px rgba(57,217,255,.1)}.thiny-float-compose button{width:44px;flex:0 0 44px;border:0;border-radius:12px;background:linear-gradient(135deg,#32dfff,#6c65ff);color:#06152b;font-size:20px;font-weight:900;cursor:pointer}.thiny-float-foot{text-align:center;padding:0 8px 10px;color:#7892b4;font-size:10px;background:rgba(2,9,23,.55)}
 @media(max-width:600px){#thiny-widget{right:14px;bottom:14px}.thiny-float-launch{width:60px;height:60px}.thiny-launch-spark{font-size:22px}.thiny-float-panel{position:fixed;right:10px;bottom:84px;width:calc(100vw - 20px);height:min(68dvh,560px);min-height:300px;border-radius:20px}.thiny-float-head{padding:12px 14px}.thiny-float-messages{padding:13px}}
 \n/* Thiny: bolinha flutuante arrastável em desktop e celular */
-#thiny-widget{position:fixed;right:24px;bottom:24px;left:auto;top:auto;z-index:99999;display:block!important;visibility:visible!important;pointer-events:none}
-#thiny-widget .thiny-float-launch{pointer-events:auto;position:relative;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;display:flex!important;visibility:visible!important}
+/* Thiny: widget compacto, sempre visível no desktop e no celular, arrastável */
+#thiny-widget{position:fixed!important;right:24px;bottom:24px;left:auto;top:auto;width:72px;height:72px;z-index:2147483000;display:block!important;visibility:visible!important;pointer-events:none;overflow:visible!important;font-family:inherit;color:#edf6ff}
+#thiny-widget .thiny-float-launch{pointer-events:auto;position:absolute;right:0;bottom:0;left:auto;top:auto;width:72px;height:72px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;display:flex!important;visibility:visible!important;z-index:2}
 #thiny-widget .thiny-float-launch:active{cursor:grabbing}
-#thiny-widget .thiny-float-panel{pointer-events:auto;position:absolute;right:0;bottom:86px;left:auto;top:auto}
+#thiny-widget .thiny-float-panel{pointer-events:auto;position:absolute;right:0;bottom:86px;left:auto;top:auto;width:370px;max-width:calc(100vw - 28px);z-index:1}
 #thiny-widget .thiny-float-panel[hidden]{display:none!important}
-@media(min-width:601px){#thiny-widget .thiny-float-launch{width:72px;height:72px}#thiny-widget .thiny-float-panel{width:370px}}
-@media(max-width:600px){#thiny-widget{right:14px;bottom:14px}#thiny-widget .thiny-float-launch{width:60px;height:60px}#thiny-widget .thiny-float-panel{position:fixed;right:10px;bottom:84px;left:10px;top:auto;width:auto;height:min(68dvh,560px);min-height:300px}}
+@media(min-width:601px){#thiny-widget{width:72px;height:72px}#thiny-widget .thiny-float-launch{width:72px;height:72px}}
+@media(max-width:600px){#thiny-widget{right:14px;bottom:14px;width:60px;height:60px}#thiny-widget .thiny-float-launch{width:60px;height:60px}#thiny-widget .thiny-float-panel{position:fixed;right:10px;bottom:84px;left:10px;top:auto;width:auto;max-width:none;height:min(68dvh,560px);min-height:300px}}
 
 
 /* Ajustes solicitados: esconder plano ADM apenas na tela pública e destacar a imagem de avião. */
